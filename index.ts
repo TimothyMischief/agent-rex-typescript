@@ -954,7 +954,35 @@ export function retry<T>(
 }
 // unnamed ends here
 
-// [[file:index.org::13942]]
+// [[file:index.org::13910]]
+type TaggedResult<T> = { index: number; value: T }
+
+/**
+ * Races multiple async iterators, yielding values tagged with their source index.
+ * Values are emitted as soon as any iterator produces one.
+ */
+async function* raceIterators<T>(
+  iterators: AsyncIterator<T>[]
+): AsyncGenerator<TaggedResult<T>, void, void> {
+  const pending = new Map<number, Promise<{ index: number; result: IteratorResult<T> }>>()
+
+  // Start all iterators
+  for (let i = 0; i < iterators.length; i++)
+    pending.set(i, iterators[i].next().then(result => ({ index: i, result })))
+
+  while (pending.size > 0) {
+    const { index, result } = await Promise.race(pending.values())
+
+    if (result.done) pending.delete(index)
+    else {
+      yield { index, value: result.value }
+      pending.set(index, iterators[index].next().then(result => ({ index, result })))
+    }
+  }
+}
+// unnamed ends here
+
+// [[file:index.org::13943]]
 type RaceResult<T, O> =
   | { type: 'inner'; index: number; value: T }
   | { type: 'outer'; value: O }
@@ -1005,7 +1033,7 @@ async function* raceIteratorsWithOuter<T, O>(
 }
 // unnamed ends here
 
-// [[file:index.org::14042]]
+// [[file:index.org::14043]]
 /**
  * Merges multiple streams into a single stream, emitting values as they arrive.
  */
@@ -1017,7 +1045,7 @@ export async function* merge<T>(
 }
 // unnamed ends here
 
-// [[file:index.org::14463]]
+// [[file:index.org::14464]]
 /**
  * Flattens a stream of streams by merging them into a single stream.
  */
@@ -1030,7 +1058,7 @@ export async function* mergeAll<T>(
 }
 // unnamed ends here
 
-// [[file:index.org::14794]]
+// [[file:index.org::14795]]
 /**
  * Maps each value from the source stream to a new stream and flattens the resulting streams into a single stream.
  */
@@ -1057,7 +1085,7 @@ export function chain<T, U>(
 export const flatMap = chain
 // unnamed ends here
 
-// [[file:index.org::15243]]
+// [[file:index.org::15233]]
 /**
  * Maps each value to a new stream, cancelling the previous inner stream when a new value arrives.
  * Only values from the most recent inner stream are emitted.
@@ -1124,7 +1152,7 @@ export function switchMap<T, U>(
 }
 // unnamed ends here
 
-// [[file:index.org::15761]]
+// [[file:index.org::15751]]
 /**
  * Extracts the element type from an AsyncIterable.
  */
@@ -1160,7 +1188,7 @@ export async function* latest<T extends readonly AsyncIterable<any>[]>(
 }
 // unnamed ends here
 
-// [[file:index.org::16182]]
+// [[file:index.org::16172]]
 /**
  * Applies the latest function from a stream of functions to the latest value from a stream of values.
  */
@@ -1175,7 +1203,7 @@ export async function* applyLatest<T, U>(
 }
 // unnamed ends here
 
-// [[file:index.org::16467]]
+// [[file:index.org::16457]]
 /**
  * Creates a stream that emits values from the source stream until another stream emits a value.
  */
@@ -1204,7 +1232,7 @@ export function untilStream<T, S = unknown>(
 }
 // unnamed ends here
 
-// [[file:index.org::16832]]
+// [[file:index.org::16822]]
 /**
  * Creates a stream that starts emitting values from the source stream only after another stream emits a value.
  */
@@ -1237,7 +1265,7 @@ export function sinceStream<T, S = unknown>(
 }
 // unnamed ends here
 
-// [[file:index.org::17196]]
+// [[file:index.org::17186]]
 /**
  * Collects values into arrays of the specified size, emitting each buffer when full.
  * The final buffer may be smaller if the source completes.
@@ -1258,14 +1286,17 @@ export function buffer<T>(
     let buf: T[] = []
     for await (const item of stream) {
       buf.push(item)
-      if (buf.length >= size) yield buf = []
+      if (buf.length >= size) {
+        yield buf
+        buf = []
+      }
     }
     if (buf.length > 0) yield buf
   })();
 }
 // unnamed ends here
 
-// [[file:index.org::17560]]
+// [[file:index.org::17553]]
 /**
  * Collects values over a time window, emitting the buffer when the window closes.
  * Continues creating new windows until the source completes.
@@ -1330,7 +1361,7 @@ export function bufferTime<T>(
 }
 // unnamed ends here
 
-// [[file:index.org::18037]]
+// [[file:index.org::18030]]
 /**
  * Splits the source into windows of the specified size.
  * Each window is emitted as a separate async iterable.
@@ -1404,7 +1435,7 @@ export function window<T>(
 }
 // unnamed ends here
 
-// [[file:index.org::18330]]
+// [[file:index.org::18323]]
 /**
  * Pre-fetches up to `bufferSize` values from a slow producer, caching them for fast downstream access.
  * Starts buffering lazily when the first value is requested.
@@ -1557,7 +1588,7 @@ export function eagerNow<T>(
 }
 // unnamed ends here
 
-// [[file:index.org::18964]]
+// [[file:index.org::18957]]
 /**
  * A multicasting subject that replays buffered values to new subscribers.
  * 
@@ -1681,7 +1712,7 @@ export class ReplaySubject<T> implements AsyncIterable<T> {
 }
 // unnamed ends here
 
-// [[file:index.org::19483]]
+// [[file:index.org::19476]]
 /**
  * Makes a stream consumable by multiple consumers by buffering values.
  * 
@@ -1726,7 +1757,7 @@ export function replay<T>(
 }
 // unnamed ends here
 
-// [[file:index.org::20044]]
+// [[file:index.org::20037]]
 /**
  * Shares a stream among multiple consumers without buffering.
  * New subscribers only receive values emitted after subscription.
@@ -1743,7 +1774,7 @@ export function share<T>(source: AsyncIterable<T>): AsyncIterable<T> {
 }
 // unnamed ends here
 
-// [[file:index.org::20384]]
+// [[file:index.org::20377]]
 /**
  * Creates a factory that produces independent copies of a buffered stream.
  * 
@@ -1789,7 +1820,7 @@ export function replayFactory<T>(
 }
 // unnamed ends here
 
-// [[file:index.org::20804]]
+// [[file:index.org::20797]]
 /**
  * Returns a stream that emits independent copies of the source stream.
  * Each pull creates a new subscriber that receives buffered + live values.
