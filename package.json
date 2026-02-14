@@ -1,6 +1,6 @@
 {
   "name": "agent-rex",
-  "version": "0.0.0-nightly.20260213",
+  "version": "0.0.0-nightly.20260214",
   "description": "An Async Generator/Iterator Based FRP-Like Library for JavaScript",
   "type": "module",
   "main": "index.ts",
